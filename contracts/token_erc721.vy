@@ -13,13 +13,29 @@ tokenOwnerCount: HashMap[address, uint256]
 
 @external
 def __init__():
-    _minter = msg.sender
+    self._minter = msg.sender
+
+# Needs change to a more useful function
+@external
+@view
+def viewTokenOwner(_token_id: uint256) -> address:
+    return self.tokenIdToOwner[_token_id]
+
+@external
+@view
+def viewOwnerCount() -> uint256:
+    return self.tokenOwnerCount[msg.sender]
+
+@external
+@view
+def viewIdApprovals(_token_id: uint256) -> bool:
+    return self.tokenIdtoApprovals[_token_id][msg.sender]
 
 @external
 def mint(_receiver: address, _tokenId: uint256) -> bool:
-    assert msg.sender == minter, "Only the 'minter' can 'mint', hence why he's the 'minter'."
+    assert msg.sender == self._minter, "Only the 'minter' can 'mint', hence why he's the 'minter'."
     assert _receiver != ZERO_ADDRESS
-    assert tokenIdToOwner[_tokenId] == ZERO_ADDRESS, "This token ID already exists"
+    assert self.tokenIdToOwner[_tokenId] == ZERO_ADDRESS
 
     self.tokenIdToOwner[_tokenId] = _receiver
     self.tokenOwnerCount[_receiver] += 1
@@ -47,7 +63,7 @@ def approve(_receiver: address, _tokenId: uint256) -> bool:
 
 @external
 def revokePermission(_addr: address, _tokenId: uint256) -> bool:
-    assert msg.sender == self.tokeIdTOOwner[_tokenId], "Must be the owner to revoke permission"
+    assert msg.sender == self.tokenIdToOwner[_tokenId], "Must be the owner to revoke permission"
     
     self.tokenIdtoApprovals[_tokenId][_addr] = False
     return True
@@ -57,9 +73,9 @@ def transferFromApproved(_receiver: address, _tokenId: uint256) -> bool:
     assert True == self.tokenIdtoApprovals[_tokenId][msg.sender], "You don't have approval"
     assert _receiver != ZERO_ADDRESS
 
-    previousOwner = self.tokenIdToOwner[_tokenId]
+    previousOwner: address = self.tokenIdToOwner[_tokenId]
 
-    self.tokeIdToOwner[_tokenId] = _receiver
+    self.tokenIdToOwner[_tokenId] = _receiver
     self.tokenIdtoApprovals[_tokenId][msg.sender] = False
     self.tokenOwnerCount[previousOwner] -= 1
     self.tokenOwnerCount[_receiver] += 1
@@ -68,14 +84,13 @@ def transferFromApproved(_receiver: address, _tokenId: uint256) -> bool:
 @external
 def burn(_tokenId: uint256) -> bool:
     # This checks to see if you are the owner or you have permission
-    # assert msg.sender == self.tokenIdToOwner[_tokenId] || True == self.tokenIdtoApprovals[_tokenId][msg.sender], "You must be owner or have permission"
+    assert msg.sender == self.tokenIdToOwner[_tokenId], "You must be owner to burn a token"
 
-    originalOwner = self.tokenIdToOwner[_tokenId]
+    originalOwner: address = self.tokenIdToOwner[_tokenId]
 
     #Have to check if clear function works
-    self.tokeIdToOwner[_tokenId].clear()
+    self.tokenIdToOwner[_tokenId] = ZERO_ADDRESS
     self.tokenOwnerCount[originalOwner] -= 1
-    self.tokenIdtoApprovals[_tokenId].clear()
 
     return True
 
